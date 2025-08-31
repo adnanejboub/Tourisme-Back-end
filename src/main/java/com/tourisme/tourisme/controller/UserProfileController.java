@@ -25,9 +25,13 @@ public class UserProfileController {
     @PutMapping("/update")
     public ResponseEntity<?> updateProfile(@RequestBody Map<String, Object> profileData) {
         try {
+            System.out.println("UserProfileController: Received profile update request");
+            System.out.println("UserProfileController: Profile data: " + profileData);
+            
             // Get current user from JWT token
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) {
+                System.out.println("UserProfileController: Authentication failed - no JWT token");
                 return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
             }
 
@@ -35,11 +39,22 @@ public class UserProfileController {
             String email = jwt.getClaimAsString("email");
             
             if (email == null) {
+                System.out.println("UserProfileController: Email not found in JWT token");
                 return ResponseEntity.status(400).body(Map.of("error", "Email not found in token"));
             }
+            
+            System.out.println("UserProfileController: Processing update for user: " + email);
 
             // Update profile using service
-            var updatedUser = userProfileService.updateUserProfile(email, profileData);
+            var updatedUserOpt = userProfileService.updateUserProfile(email, profileData);
+            
+            if (updatedUserOpt.isEmpty()) {
+                System.out.println("UserProfileController: User not found for email: " + email);
+                return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+            }
+            
+            var updatedUser = updatedUserOpt.get();
+            System.out.println("UserProfileController: Profile updated successfully for user: " + email);
             
             return ResponseEntity.ok(Map.of(
                 "message", "Profile updated successfully",
@@ -47,6 +62,8 @@ public class UserProfileController {
             ));
 
         } catch (Exception e) {
+            System.out.println("UserProfileController: Error updating profile: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of(
                 "error", "profile_update_failed",
                 "message", e.getMessage()
@@ -82,6 +99,45 @@ public class UserProfileController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
                 "error", "profile_completion_failed",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Get complete user profile for Flutter app
+     * @return Complete user profile with both Utilisateur and Touriste data
+     */
+    @GetMapping("/complete")
+    public ResponseEntity<?> getCompleteProfile() {
+        try {
+            // Get current user from JWT token
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) {
+                return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+            }
+
+            Jwt jwt = (Jwt) authentication.getPrincipal();
+            String email = jwt.getClaimAsString("email");
+            
+            if (email == null) {
+                return ResponseEntity.status(400).body(Map.of("error", "Email not found in token"));
+            }
+
+            // Get complete profile using service
+            var profileData = userProfileService.getCompleteProfile(email);
+            
+            if (profileData.containsKey("error")) {
+                System.out.println("UserProfileController: Error getting profile: " + profileData);
+                return ResponseEntity.status(404).body(profileData);
+            }
+            
+            System.out.println("UserProfileController: Successfully retrieved profile data: " + profileData);
+            return ResponseEntity.ok(profileData);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "profile_retrieval_failed",
                 "message", e.getMessage()
             ));
         }

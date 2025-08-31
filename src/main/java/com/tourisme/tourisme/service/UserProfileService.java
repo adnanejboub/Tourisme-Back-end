@@ -14,6 +14,7 @@ import java.util.Date;
 import java.util.Optional;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
 
 @Service
 @Transactional
@@ -32,22 +33,41 @@ public class UserProfileService {
      * @return Updated user profile
      */
     public Optional<Utilisateur> updateUserProfile(Long userId, java.util.Map<String, Object> profileData) {
+        System.out.println("UserProfileService: Updating profile for userId: " + userId);
+        System.out.println("UserProfileService: Profile data received: " + profileData);
+        
         Optional<Utilisateur> userOpt = utilisateurRepository.findById(userId);
         
         if (userOpt.isEmpty()) {
+            System.out.println("UserProfileService: User not found for userId: " + userId);
             return Optional.empty();
         }
 
         Utilisateur user = userOpt.get();
+        System.out.println("UserProfileService: Found user: " + user.getEmail());
         boolean updated = false;
 
         // Update Utilisateur fields
+        if (profileData.containsKey("firstName") && profileData.get("firstName") != null) {
+            System.out.println("UserProfileService: Updating firstName to: " + profileData.get("firstName"));
+            user.setPrenom((String) profileData.get("firstName"));
+            updated = true;
+        }
+
+        if (profileData.containsKey("lastName") && profileData.get("lastName") != null) {
+            System.out.println("UserProfileService: Updating lastName to: " + profileData.get("lastName"));
+            user.setNom((String) profileData.get("lastName"));
+            updated = true;
+        }
+
         if (profileData.containsKey("telephone") && profileData.get("telephone") != null) {
+            System.out.println("UserProfileService: Updating telephone to: " + profileData.get("telephone"));
             user.setTelephone((String) profileData.get("telephone"));
             updated = true;
         }
 
         if (profileData.containsKey("adresse") && profileData.get("adresse") != null) {
+            System.out.println("UserProfileService: Updating adresse to: " + profileData.get("adresse"));
             user.setAdresse((String) profileData.get("adresse"));
             updated = true;
         }
@@ -76,26 +96,31 @@ public class UserProfileService {
             Touriste touriste = touristeOpt.get();
             
             if (profileData.containsKey("nationalite") && profileData.get("nationalite") != null) {
+                System.out.println("UserProfileService: Updating nationalite to: " + profileData.get("nationalite"));
                 touriste.setNationalite((String) profileData.get("nationalite"));
                 updated = true;
             }
 
             if (profileData.containsKey("passeport") && profileData.get("passeport") != null) {
+                System.out.println("UserProfileService: Updating passeport to: " + profileData.get("passeport"));
                 touriste.setPasseport((String) profileData.get("passeport"));
                 updated = true;
             }
 
             if (profileData.containsKey("preferences") && profileData.get("preferences") != null) {
+                System.out.println("UserProfileService: Updating preferences to: " + profileData.get("preferences"));
                 touriste.setPreferences((String) profileData.get("preferences"));
                 updated = true;
             }
 
             if (profileData.containsKey("niveauLangue") && profileData.get("niveauLangue") != null) {
+                System.out.println("UserProfileService: Updating niveauLangue to: " + profileData.get("niveauLangue"));
                 touriste.setNiveauLangue((String) profileData.get("niveauLangue"));
                 updated = true;
             }
 
             if (profileData.containsKey("budgetMax") && profileData.get("budgetMax") != null) {
+                System.out.println("UserProfileService: Updating budgetMax to: " + profileData.get("budgetMax"));
                 try {
                     if (profileData.get("budgetMax") instanceof Number) {
                         touriste.setBudgetMax(((Number) profileData.get("budgetMax")).floatValue());
@@ -109,13 +134,19 @@ public class UserProfileService {
             }
 
             if (updated) {
+                System.out.println("UserProfileService: Saving updated touriste");
                 touristeRepository.save(touriste);
+                System.out.println("UserProfileService: Touriste saved successfully");
             }
         }
 
         // Save user if any updates were made
         if (updated) {
+            System.out.println("UserProfileService: Saving updated user");
             user = utilisateurRepository.save(user);
+            System.out.println("UserProfileService: User saved successfully");
+        } else {
+            System.out.println("UserProfileService: No updates were made");
         }
 
         return Optional.of(user);
@@ -331,5 +362,76 @@ public class UserProfileService {
             "completedCount", completedFields.size(),
             "missingCount", missingFields.size()
         );
+    }
+
+    /**
+     * Get complete user profile with both Utilisateur and Touriste data
+     * @param email The user email
+     * @return Complete profile information
+     */
+    public Map<String, Object> getCompleteProfile(String email) {
+        System.out.println("UserProfileService: Getting complete profile for email: " + email);
+        
+        Optional<Utilisateur> userOpt = utilisateurRepository.findByEmail(email);
+        
+        if (userOpt.isEmpty()) {
+            System.out.println("UserProfileService: User not found for email: " + email);
+            return Map.of(
+                "error", "user_not_found",
+                "message", "User not found"
+            );
+        }
+
+        Utilisateur user = userOpt.get();
+        System.out.println("UserProfileService: Found user: " + user.getEmail());
+        System.out.println("UserProfileService: User firstName: " + user.getPrenom());
+        System.out.println("UserProfileService: User lastName: " + user.getNom());
+        
+        Optional<Touriste> touristeOpt = touristeRepository.findByUtilisateur(user);
+
+        Map<String, Object> profileData = new HashMap<>();
+        
+        // Basic user information
+        profileData.put("id", user.getIdUtilisateur());
+        profileData.put("email", user.getEmail());
+        profileData.put("firstName", user.getPrenom());
+        profileData.put("lastName", user.getNom());
+        profileData.put("telephone", user.getTelephone());
+        profileData.put("adresse", user.getAdresse());
+        profileData.put("dateNaissance", user.getDateNaissance());
+        profileData.put("cin", user.getCin());
+        profileData.put("dateInscription", user.getDateInscription());
+        
+        System.out.println("UserProfileService: Profile data - firstName: " + user.getPrenom());
+        System.out.println("UserProfileService: Profile data - lastName: " + user.getNom());
+        System.out.println("UserProfileService: Profile data - telephone: " + user.getTelephone());
+        System.out.println("UserProfileService: Profile data - adresse: " + user.getAdresse());
+        
+        // Role information
+        if (user.getRole() != null) {
+            profileData.put("role", user.getRole().getNomRole());
+        }
+        
+        // Tourist-specific information
+        if (touristeOpt.isPresent()) {
+            Touriste touriste = touristeOpt.get();
+            profileData.put("touristeId", touriste.getIdTouriste());
+            profileData.put("nationalite", touriste.getNationalite());
+            profileData.put("passeport", touriste.getPasseport());
+            profileData.put("dateEntree", touriste.getDateEntree());
+            profileData.put("dateSortie", touriste.getDateSortie());
+            profileData.put("preferences", touriste.getPreferences());
+            profileData.put("niveauLangue", touriste.getNiveauLangue());
+            profileData.put("budgetMax", touriste.getBudgetMax());
+            
+            System.out.println("UserProfileService: Tourist data - nationalite: " + touriste.getNationalite());
+            System.out.println("UserProfileService: Tourist data - passeport: " + touriste.getPasseport());
+            System.out.println("UserProfileService: Tourist data - budgetMax: " + touriste.getBudgetMax());
+        } else {
+            System.out.println("UserProfileService: No tourist data found for user");
+        }
+        
+        System.out.println("UserProfileService: Returning complete profile data: " + profileData);
+        return profileData;
     }
 }

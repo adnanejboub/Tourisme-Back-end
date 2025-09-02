@@ -36,28 +36,27 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .authorizeHttpRequests(authz -> authz
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // 💡 Preflight support
-                .requestMatchers("/public/**", "/test/**").permitAll()
-                .requestMatchers("/admin/**").hasRole("ADMIN")
-                .requestMatchers("/tourist/**").hasRole("TOURISTE")
-                .requestMatchers("/api/events/**").permitAll() // Events are public
-                .requestMatchers("/api/search/**").permitAll() // Search is public
-                .requestMatchers("/auth/**").permitAll() // Tous les endpoints d'auth sont publics
-                .requestMatchers("/api/**").authenticated()
-                .anyRequest().authenticated()
-            )
-            // Configuration OAuth2 Resource Server pour la validation JWT
-            // Note: Cette configuration s'applique à tous les endpoints
-            // mais les endpoints /auth/** sont marqués comme permitAll()
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt
-                    .jwkSetUri("http://localhost:8090/realms/tourisme/protocol/openid-connect/certs")
-                    .jwtAuthenticationConverter(jwtAuthenticationConverter())
-                )
-            );
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(authz -> authz
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // 💡 Preflight support
+                        .requestMatchers("/public/**", "/test/**").permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/tourist/**").hasRole("TOURISTE")
+                        .requestMatchers("/api/events/**").permitAll() // Events are public
+                        .requestMatchers("/api/search/**").permitAll() // Search is public
+                        .requestMatchers("/auth/**").permitAll() // Tous les endpoints d'auth sont publics
+                        .requestMatchers("/api/**").authenticated()
+                        .requestMatchers("/products/**").permitAll()
+                        .requestMatchers("/categories/**").permitAll()
+                        .anyRequest().authenticated())
+                // Configuration OAuth2 Resource Server pour la validation JWT
+                // Note: Cette configuration s'applique à tous les endpoints
+                // mais les endpoints /auth/** sont marqués comme permitAll()
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt
+                                .jwkSetUri("http://localhost:8090/realms/tourisme/protocol/openid-connect/certs")
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter())));
 
         return http.build();
     }
@@ -68,19 +67,19 @@ public class SecurityConfig {
 
         // Allow all origins for development (be more restrictive in production)
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        
+
         // Allow all methods
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        
+
         // Allow all headers
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        
+
         // Expose headers
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", "Access-Control-Allow-Origin"));
-        
+
         // Allow credentials
         configuration.setAllowCredentials(true);
-        
+
         // Set max age
         configuration.setMaxAge(3600L);
 
@@ -89,6 +88,7 @@ public class SecurityConfig {
 
         return source;
     }
+
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
@@ -99,39 +99,38 @@ public class SecurityConfig {
     /**
      * Custom converter to handle Keycloak's nested role structure
      */
-    public static class KeycloakJwtGrantedAuthoritiesConverter implements 
-            org.springframework.core.convert.converter.Converter<org.springframework.security.oauth2.jwt.Jwt, 
-            java.util.Collection<org.springframework.security.core.GrantedAuthority>> {
-        
+    public static class KeycloakJwtGrantedAuthoritiesConverter implements
+            org.springframework.core.convert.converter.Converter<org.springframework.security.oauth2.jwt.Jwt, java.util.Collection<org.springframework.security.core.GrantedAuthority>> {
+
         @Override
         public java.util.Collection<org.springframework.security.core.GrantedAuthority> convert(
                 org.springframework.security.oauth2.jwt.Jwt jwt) {
-            
-            java.util.Collection<org.springframework.security.core.GrantedAuthority> authorities = 
-                new java.util.ArrayList<>();
-            
+
+            java.util.Collection<org.springframework.security.core.GrantedAuthority> authorities = new java.util.ArrayList<>();
+
             // Extract realm_access.roles from JWT
             Object realmAccess = jwt.getClaim("realm_access");
             if (realmAccess instanceof java.util.Map) {
                 @SuppressWarnings("unchecked")
                 java.util.Map<String, Object> realmAccessMap = (java.util.Map<String, Object>) realmAccess;
                 Object roles = realmAccessMap.get("roles");
-                
+
                 if (roles instanceof java.util.List) {
                     @SuppressWarnings("unchecked")
                     java.util.List<String> rolesList = (java.util.List<String>) roles;
-                    
+
                     for (String role : rolesList) {
                         // Skip default Keycloak roles
-                        if (!role.startsWith("default-roles-") && 
-                            !role.equals("offline_access") && 
-                            !role.equals("uma_authorization")) {
-                            authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+                        if (!role.startsWith("default-roles-") &&
+                                !role.equals("offline_access") &&
+                                !role.equals("uma_authorization")) {
+                            authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                    "ROLE_" + role.toUpperCase()));
                         }
                     }
                 }
             }
-            
+
             return authorities;
         }
     }

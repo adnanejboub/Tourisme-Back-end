@@ -1,5 +1,6 @@
 package com.tourisme.tourisme.controller;
 
+import com.tourisme.tourisme.dto.VilleDTO;
 import com.tourisme.tourisme.entities.Activite;
 import com.tourisme.tourisme.entities.Produit;
 import com.tourisme.tourisme.entities.Ville;
@@ -25,15 +26,15 @@ public class PublicController {
     @Autowired
     private ProduitRepository produitRepository;
 
-    // Public Explore
+    // Public Explore - Return DTOs to avoid circular references
     @GetMapping("/cities")
-    public ResponseEntity<List<Ville>> getCities() {
-        return ResponseEntity.ok(villeService.getAllVilles());
+    public ResponseEntity<List<VilleDTO>> getCities() {
+        return ResponseEntity.ok(villeService.getAllVillesDTO());
     }
 
     @GetMapping("/cities/{id}")
     public ResponseEntity<?> getCity(@PathVariable Long id) {
-        return villeService.getVilleById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+        return villeService.getVilleDTOById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/activities")
@@ -50,7 +51,7 @@ public class PublicController {
     @GetMapping("/search")
     public ResponseEntity<Map<String, Object>> search(@RequestParam("q") String q) {
         Map<String, Object> result = new HashMap<>();
-        result.put("cities", villeService.searchVillesByName(q));
+        result.put("cities", villeService.searchVillesByNameDTO(q));
         result.put("activities", activiteService.searchActivitesByName(q));
         return ResponseEntity.ok(result);
     }
@@ -131,11 +132,11 @@ public class PublicController {
         }
     }
 
-    // Get popular cities
+    // Get popular cities - Return DTOs
     @GetMapping("/cities/popular")
     public ResponseEntity<?> getPopularCities() {
         try {
-            List<Ville> popularCities = villeService.getPopularVilles();
+            List<VilleDTO> popularCities = villeService.getPopularVillesDTO();
             return ResponseEntity.ok(popularCities);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
@@ -145,11 +146,11 @@ public class PublicController {
         }
     }
 
-    // Get recommended cities
+    // Get recommended cities - Return DTOs
     @GetMapping("/cities/recommended")
     public ResponseEntity<?> getRecommendedCities() {
         try {
-            List<Ville> recommendedCities = villeService.getRecommendedVilles();
+            List<VilleDTO> recommendedCities = villeService.getRecommendedVillesDTO();
             return ResponseEntity.ok(recommendedCities);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(

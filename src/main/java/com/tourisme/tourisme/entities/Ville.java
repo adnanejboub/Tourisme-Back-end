@@ -1,5 +1,8 @@
 package com.tourisme.tourisme.entities;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.List;
 
@@ -96,27 +99,35 @@ public class Ville {
     private Localisation localisation;
     
     @OneToMany(mappedBy = "ville", cascade = CascadeType.ALL)
+    @JsonManagedReference("ville-specialites")
     private List<SpecialiteVille> specialites;
     
     @OneToMany(mappedBy = "ville", cascade = CascadeType.ALL)
+    @JsonManagedReference("ville-monuments")
     private List<Monument> monuments;
     
     @OneToMany(mappedBy = "ville", cascade = CascadeType.ALL)
+    @JsonManagedReference("ville-hebergements")
     private List<Hebergement> hebergements;
     
     @OneToMany(mappedBy = "ville", cascade = CascadeType.ALL)
+    @JsonManagedReference("ville-aeroports")
     private List<Aeroport> aeroports;
     
     @OneToMany(mappedBy = "ville", cascade = CascadeType.ALL)
+    @JsonManagedReference("ville-activites")
     private List<Activite> activites;
     
     @OneToMany(mappedBy = "ville", cascade = CascadeType.ALL)
+    @JsonManagedReference("ville-services")
     private List<Service> services;
     
     @OneToMany(mappedBy = "ville", cascade = CascadeType.ALL)
+    @JsonManagedReference("ville-agencesLocation")
     private List<AgenceLocation> agencesLocation;
     
     @OneToMany(mappedBy = "ville", cascade = CascadeType.ALL)
+    @JsonManagedReference("ville-conseils")
     private List<Conseil> conseils;
     
     // Constructors

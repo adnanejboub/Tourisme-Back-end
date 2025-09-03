@@ -1,5 +1,6 @@
 package com.tourisme.tourisme.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 @Entity
@@ -20,6 +21,7 @@ public class Aeroport {
     // Relationships
     @ManyToOne
     @JoinColumn(name = "id_ville")
+    @JsonBackReference("ville-aeroports")
     private Ville ville;
     
     // Constructors

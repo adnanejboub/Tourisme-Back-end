@@ -1,5 +1,7 @@
 package com.tourisme.tourisme.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import java.util.Date;
@@ -91,10 +93,12 @@ public class Utilisateur {
     
     // Relationships
     @OneToMany(mappedBy = "utilisateur", cascade = CascadeType.ALL)
+    @JsonManagedReference("utilisateur-paiements")
     private List<Paiement> paiements;
     
     @ManyToOne
     @JoinColumn(name = "id_role")
+    @JsonIgnore
     private Role role;
     
     // Constructors

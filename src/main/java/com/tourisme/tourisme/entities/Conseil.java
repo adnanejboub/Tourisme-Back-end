@@ -1,5 +1,6 @@
 package com.tourisme.tourisme.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 @Entity
@@ -21,6 +22,7 @@ public class Conseil {
     // Relationship with Ville
     @ManyToOne
     @JoinColumn(name = "id_ville")
+    @JsonBackReference("ville-conseils")
     private Ville ville;
     
     // Enum for type_conseil

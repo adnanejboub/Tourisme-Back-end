@@ -1,6 +1,7 @@
 package com.tourisme.tourisme.dto;
 
 import com.tourisme.tourisme.entities.Activite.CategorieActivite;
+import java.util.List;
 
 public class ActiviteDTO {
     private Long idActivite;
@@ -11,7 +12,7 @@ public class ActiviteDTO {
     private String niveauDificulta;
     private String conditionsSpeciales;
     private CategorieActivite categorie;
-    private String villeNom;
+    private List<String> mediaUrls; // Just URLs, not full Media objects
 
     // Constructors
     public ActiviteDTO() {}
@@ -89,11 +90,11 @@ public class ActiviteDTO {
         this.categorie = categorie;
     }
 
-    public String getVilleNom() {
-        return villeNom;
+    public List<String> getMediaUrls() {
+        return mediaUrls;
     }
 
-    public void setVilleNom(String villeNom) {
-        this.villeNom = villeNom;
+    public void setMediaUrls(List<String> mediaUrls) {
+        this.mediaUrls = mediaUrls;
     }
 } 

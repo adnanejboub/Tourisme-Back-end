@@ -1,5 +1,6 @@
 package com.tourisme.tourisme.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import java.util.List;
 
@@ -37,6 +38,7 @@ public class Activite {
     // Relationships
     @ManyToOne
     @JoinColumn(name = "id_ville")
+    @JsonBackReference("ville-activites")
     private Ville ville;
     
     @ManyToMany

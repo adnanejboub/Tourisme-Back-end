@@ -1,5 +1,6 @@
 package com.tourisme.tourisme.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import java.util.List;
 
@@ -13,6 +14,7 @@ public class AgenceLocation extends Utilisateur {
     // Relationships
     @ManyToOne
     @JoinColumn(name = "id_ville")
+    @JsonBackReference("ville-agencesLocation")
     private Ville ville;
     
     @OneToMany(mappedBy = "agenceLocation", cascade = CascadeType.ALL)

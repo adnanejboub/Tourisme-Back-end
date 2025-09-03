@@ -1,5 +1,6 @@
 package com.tourisme.tourisme.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import java.util.List;
 
@@ -19,6 +20,7 @@ public class Service {
     // Relationships
     @ManyToOne
     @JoinColumn(name = "id_ville")
+    @JsonBackReference("ville-services")
     private Ville ville;
     
     @ManyToOne

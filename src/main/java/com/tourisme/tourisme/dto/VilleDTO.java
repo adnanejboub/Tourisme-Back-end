@@ -10,6 +10,7 @@ public class VilleDTO {
     private Float longitude;
     private Boolean allInclusive;
     private String allouement;
+    private Float noteMoyenne;
     
     // Boolean attributes for city characteristics
     private Boolean isPlage;
@@ -104,6 +105,14 @@ public class VilleDTO {
 
     public void setAllouement(String allouement) {
         this.allouement = allouement;
+    }
+
+    public Float getNoteMoyenne() {
+        return noteMoyenne;
+    }
+
+    public void setNoteMoyenne(Float noteMoyenne) {
+        this.noteMoyenne = noteMoyenne;
     }
 
     public Boolean getIsPlage() {

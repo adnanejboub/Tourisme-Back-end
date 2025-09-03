@@ -205,6 +205,7 @@ public class VilleService {
         dto.setLongitude(ville.getLongitude());
         dto.setAllInclusive(ville.getAllInclusive());
         dto.setAllouement(ville.getAllouement());
+        dto.setNoteMoyenne(ville.getNoteMoyenne());
         
         // Boolean characteristics
         dto.setIsPlage(ville.getIsPlage());

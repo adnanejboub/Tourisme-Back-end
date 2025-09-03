@@ -11,6 +11,8 @@ import com.tourisme.tourisme.entities.Hebergement;
 import com.tourisme.tourisme.dto.HebergementDTO;
 import com.tourisme.tourisme.repository.HebergementRepository;
 import com.tourisme.tourisme.repository.ProduitRepository;
+import com.tourisme.tourisme.repository.ServiceRepository;
+import com.tourisme.tourisme.entities.Service;
 import com.tourisme.tourisme.service.ActiviteService;
 import com.tourisme.tourisme.service.VilleService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/public")
@@ -38,6 +43,9 @@ public class PublicController {
     @Autowired
     private HebergementRepository hebergementRepository;
 
+    @Autowired
+    private ServiceRepository serviceRepository;
+
     // Public Explore - Return DTOs to avoid circular references
     @GetMapping("/cities")
     public ResponseEntity<List<VilleDTO>> getCities() {
@@ -47,6 +55,113 @@ public class PublicController {
     @GetMapping("/cities/{id}")
     public ResponseEntity<?> getCity(@PathVariable Long id) {
         return villeService.getVilleDTOById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    // Get comprehensive city details with all related data
+    @GetMapping("/cities/{id}/details")
+    public ResponseEntity<?> getCityDetails(@PathVariable Long id) {
+        try {
+            Map<String, Object> cityDetails = new HashMap<>();
+            
+            // Get city basic info
+            Optional<VilleDTO> cityOpt = villeService.getVilleDTOById(id);
+            if (cityOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            VilleDTO city = cityOpt.get();
+            cityDetails.put("city", city);
+            
+            // Get city activities with enhanced details
+            List<Activite> activities = activiteService.getActivitesByVille(id);
+            cityDetails.put("activities", activities);
+            
+            // Get city monuments with enhanced details
+            List<Monument> monuments = monumentRepository.findByVille_IdVille(id);
+            List<Map<String, Object>> monumentDetails = monuments.stream().map(m -> {
+                Map<String, Object> monumentMap = new HashMap<>();
+                monumentMap.put("idMonument", m.getIdMonument());
+                monumentMap.put("nomMonument", m.getNomMonument());
+                monumentMap.put("adresseMonument", m.getAdresseMonument());
+                monumentMap.put("prix", m.getPrix());
+                monumentMap.put("gratuit", m.getGratuit());
+                monumentMap.put("hasCulturelle", m.getHasCulturelle());
+                monumentMap.put("hasHistorique", m.getHasHistorique());
+                monumentMap.put("notesMoyennes", m.getNotesMoyennes());
+                monumentMap.put("description", m.getDescription());
+                monumentMap.put("imageUrl", m.getImageUrl());
+                monumentMap.put("horairesOuverture", m.getHorairesOuverture());
+                monumentMap.put("typeMonument", m.getTypeMonument());
+                return monumentMap;
+            }).toList();
+            cityDetails.put("monuments", monumentDetails);
+            
+            // Get city accommodations with enhanced details
+            List<Object[]> hebergementRows = hebergementRepository.findByCityName(city.getNomVille());
+            List<Map<String, Object>> accommodationDetails = hebergementRows.stream().map(r -> {
+                Map<String, Object> accMap = new HashMap<>();
+                accMap.put("idHebergement", ((Number) r[0]).longValue());
+                accMap.put("nomHebergement", (String) r[1]);
+                accMap.put("adresse", (String) r[2]);
+                accMap.put("prixParNuit", r[3] != null ? ((Number) r[3]).floatValue() : null);
+                accMap.put("etoiles", r[4] != null ? ((Number) r[4]).intValue() : null);
+                accMap.put("description", (String) r[5]);
+                accMap.put("isDisponible", r[6] != null ? ((Boolean) r[6]) : null);
+                accMap.put("hebergementType", (String) r[7]);
+                accMap.put("imageUrl", "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400"); // Default image
+                accMap.put("amenities", List.of("WiFi", "Parking", "Restaurant")); // Default amenities
+                return accMap;
+            }).toList();
+            cityDetails.put("accommodations", accommodationDetails);
+            
+            // Get city events (placeholder for now)
+            cityDetails.put("events", new ArrayList<>());
+            
+            // Get city services with enhanced details
+            List<Service> services = serviceRepository.findByVille_IdVille(id);
+            List<Map<String, Object>> serviceDetails = services.stream().map(s -> {
+                Map<String, Object> serviceMap = new HashMap<>();
+                serviceMap.put("idService", s.getIdService());
+                serviceMap.put("typeService", s.getTypeService());
+                serviceMap.put("nomService", s.getTypeService().toString()); // Use type as name for now
+                serviceMap.put("description", "Service de type " + s.getTypeService().toString());
+                serviceMap.put("categorie", s.getTypeService().toString());
+                serviceMap.put("prix", 0.0); // Default price
+                serviceMap.put("disponible", true); // Default availability
+                serviceMap.put("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400"); // Default image
+                return serviceMap;
+            }).toList();
+            cityDetails.put("services", serviceDetails);
+            
+            // Add city statistics
+            Map<String, Object> statistics = new HashMap<>();
+            statistics.put("totalActivities", activities.size());
+            statistics.put("totalMonuments", monuments.size());
+            statistics.put("totalAccommodations", accommodationDetails.size());
+            statistics.put("totalServices", serviceDetails.size());
+            statistics.put("averageRating", city.getNoteMoyenne());
+            cityDetails.put("statistics", statistics);
+            
+            // Add city highlights (key attractions)
+            List<Map<String, Object>> highlights = monuments.stream()
+                .filter(m -> m.getNotesMoyennes() != null && m.getNotesMoyennes() >= 4.0)
+                .limit(4)
+                .map(m -> {
+                    Map<String, Object> highlight = new HashMap<>();
+                    highlight.put("name", m.getNomMonument());
+                    highlight.put("type", "Monument");
+                    highlight.put("rating", m.getNotesMoyennes());
+                    highlight.put("imageUrl", m.getImageUrl());
+                    return highlight;
+                }).toList();
+            cityDetails.put("highlights", highlights);
+            
+            return ResponseEntity.ok(cityDetails);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "city_details_retrieval_failed",
+                "message", e.getMessage()
+            ));
+        }
     }
 
     @GetMapping("/activities")
@@ -285,6 +400,32 @@ public class PublicController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
                 "error", "hebergements_by_city_failed",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    // Get services by city
+    @GetMapping("/cities/{id}/services")
+    public ResponseEntity<?> getCityServices(@PathVariable Long id) {
+        try {
+            List<Service> services = serviceRepository.findByVille_IdVille(id);
+            List<Map<String, Object>> serviceDetails = services.stream().map(s -> {
+                Map<String, Object> serviceMap = new HashMap<>();
+                serviceMap.put("idService", s.getIdService());
+                serviceMap.put("typeService", s.getTypeService());
+                serviceMap.put("nomService", s.getTypeService().toString());
+                serviceMap.put("description", "Service de type " + s.getTypeService().toString());
+                serviceMap.put("categorie", s.getTypeService().toString());
+                serviceMap.put("prix", 0.0);
+                serviceMap.put("disponible", true);
+                serviceMap.put("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400");
+                return serviceMap;
+            }).toList();
+            return ResponseEntity.ok(serviceDetails);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "services_retrieval_failed",
                 "message", e.getMessage()
             ));
         }

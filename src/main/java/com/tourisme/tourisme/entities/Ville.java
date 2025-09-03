@@ -33,6 +33,9 @@ public class Ville {
     @Column(name = "allouement")
     private String allouement;
     
+    @Column(name = "note_moyenne")
+    private Float noteMoyenne;
+    
     // Boolean attributes for city characteristics
     @Column(name = "is_plage")
     private Boolean isPlage;
@@ -193,6 +196,14 @@ public class Ville {
     
     public void setAllouement(String allouement) {
         this.allouement = allouement;
+    }
+    
+    public Float getNoteMoyenne() {
+        return noteMoyenne;
+    }
+    
+    public void setNoteMoyenne(Float noteMoyenne) {
+        this.noteMoyenne = noteMoyenne;
     }
     
     public Boolean getIsPlage() {

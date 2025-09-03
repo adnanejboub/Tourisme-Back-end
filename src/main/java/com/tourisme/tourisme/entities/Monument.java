@@ -34,6 +34,18 @@ public class Monument {
     @Column(name = "notes_moyennes")
     private Float notesMoyennes;
     
+    @Column(name = "description")
+    private String description;
+    
+    @Column(name = "image_url")
+    private String imageUrl;
+    
+    @Column(name = "horaires_ouverture")
+    private String horairesOuverture;
+    
+    @Column(name = "type_monument")
+    private String typeMonument;
+    
     // Relationships
     @ManyToOne
     @JoinColumn(name = "id_ville")
@@ -147,5 +159,37 @@ public class Monument {
     
     public void setMedias(List<Media> medias) {
         this.medias = medias;
+    }
+    
+    public String getDescription() {
+        return description;
+    }
+    
+    public void setDescription(String description) {
+        this.description = description;
+    }
+    
+    public String getImageUrl() {
+        return imageUrl;
+    }
+    
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+    
+    public String getHorairesOuverture() {
+        return horairesOuverture;
+    }
+    
+    public void setHorairesOuverture(String horairesOuverture) {
+        this.horairesOuverture = horairesOuverture;
+    }
+    
+    public String getTypeMonument() {
+        return typeMonument;
+    }
+    
+    public void setTypeMonument(String typeMonument) {
+        this.typeMonument = typeMonument;
     }
 } 

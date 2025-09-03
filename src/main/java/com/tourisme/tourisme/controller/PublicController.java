@@ -4,6 +4,12 @@ import com.tourisme.tourisme.dto.VilleDTO;
 import com.tourisme.tourisme.entities.Activite;
 import com.tourisme.tourisme.entities.Produit;
 import com.tourisme.tourisme.entities.Ville;
+import com.tourisme.tourisme.entities.Monument;
+import com.tourisme.tourisme.dto.MonumentDTO;
+import com.tourisme.tourisme.repository.MonumentRepository;
+import com.tourisme.tourisme.entities.Hebergement;
+import com.tourisme.tourisme.dto.HebergementDTO;
+import com.tourisme.tourisme.repository.HebergementRepository;
 import com.tourisme.tourisme.repository.ProduitRepository;
 import com.tourisme.tourisme.service.ActiviteService;
 import com.tourisme.tourisme.service.VilleService;
@@ -25,6 +31,12 @@ public class PublicController {
 
     @Autowired
     private ProduitRepository produitRepository;
+
+    @Autowired
+    private MonumentRepository monumentRepository;
+
+    @Autowired
+    private HebergementRepository hebergementRepository;
 
     // Public Explore - Return DTOs to avoid circular references
     @GetMapping("/cities")
@@ -96,19 +108,183 @@ public class PublicController {
         }
     }
 
-    // Get attractions by city (monuments, etc.)
-    @GetMapping("/cities/{id}/attractions")
-    public ResponseEntity<?> getCityAttractions(@PathVariable Long id) {
+    // Get monuments by city
+    @GetMapping("/cities/{id}/monuments")
+    public ResponseEntity<?> getCityMonuments(@PathVariable Long id) {
         try {
-            // TODO: Implement attractions service
-            return ResponseEntity.ok(Map.of(
-                "message", "Attractions endpoint ready - implementation needed",
-                "cityId", id,
-                "attractions", new ArrayList<>()
-            ));
+            List<Monument> monuments = monumentRepository.findByVille_IdVille(id);
+            List<MonumentDTO> dto = monuments.stream().map(m -> {
+                MonumentDTO d = new MonumentDTO();
+                d.setIdMonument(m.getIdMonument());
+                d.setNomMonument(m.getNomMonument());
+                d.setAdresseMonument(m.getAdresseMonument());
+                d.setPrix(m.getPrix());
+                d.setGratuit(m.getGratuit());
+                d.setHasCulturelle(m.getHasCulturelle());
+                d.setHasHistorique(m.getHasHistorique());
+                d.setNotesMoyennes(m.getNotesMoyennes());
+                return d;
+            }).toList();
+            return ResponseEntity.ok(dto);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
-                "error", "attractions_retrieval_failed",
+                "error", "monuments_retrieval_failed",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    // Search monuments by name (global)
+    @GetMapping("/monuments/search")
+    public ResponseEntity<?> searchMonuments(@RequestParam("q") String q) {
+        try {
+            List<Monument> monuments = monumentRepository.findByNomMonumentContainingIgnoreCase(q);
+            List<MonumentDTO> dto = monuments.stream().map(m -> {
+                MonumentDTO d = new MonumentDTO();
+                d.setIdMonument(m.getIdMonument());
+                d.setNomMonument(m.getNomMonument());
+                d.setAdresseMonument(m.getAdresseMonument());
+                d.setPrix(m.getPrix());
+                d.setGratuit(m.getGratuit());
+                d.setHasCulturelle(m.getHasCulturelle());
+                d.setHasHistorique(m.getHasHistorique());
+                d.setNotesMoyennes(m.getNotesMoyennes());
+                return d;
+            }).toList();
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "monuments_search_failed",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    // Search monuments by city name
+    @GetMapping("/monuments/by-city")
+    public ResponseEntity<?> getMonumentsByCity(@RequestParam("city") String cityName) {
+        try {
+            List<Monument> monuments = monumentRepository.findByCityName(cityName);
+            List<MonumentDTO> dto = monuments.stream().map(m -> {
+                MonumentDTO d = new MonumentDTO();
+                d.setIdMonument(m.getIdMonument());
+                d.setNomMonument(m.getNomMonument());
+                d.setAdresseMonument(m.getAdresseMonument());
+                d.setPrix(m.getPrix());
+                d.setGratuit(m.getGratuit());
+                d.setHasCulturelle(m.getHasCulturelle());
+                d.setHasHistorique(m.getHasHistorique());
+                d.setNotesMoyennes(m.getNotesMoyennes());
+                return d;
+            }).toList();
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "monuments_by_city_failed",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    // List all monuments
+    @GetMapping("/monuments")
+    public ResponseEntity<?> getAllMonuments() {
+        try {
+            List<Monument> monuments = monumentRepository.findAll();
+            List<MonumentDTO> dto = monuments.stream().map(m -> {
+                MonumentDTO d = new MonumentDTO();
+                d.setIdMonument(m.getIdMonument());
+                d.setNomMonument(m.getNomMonument());
+                d.setAdresseMonument(m.getAdresseMonument());
+                d.setPrix(m.getPrix());
+                d.setGratuit(m.getGratuit());
+                d.setHasCulturelle(m.getHasCulturelle());
+                d.setHasHistorique(m.getHasHistorique());
+                d.setNotesMoyennes(m.getNotesMoyennes());
+                return d;
+            }).toList();
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "monuments_list_failed",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    // List all accommodations (hébergements)
+    @GetMapping("/hebergements")
+    public ResponseEntity<?> getAllHebergements() {
+        try {
+            List<Object[]> rows = hebergementRepository.findAllAsRows();
+            List<HebergementDTO> dto = rows.stream().map(r -> {
+                HebergementDTO d = new HebergementDTO();
+                d.setIdHebergement(((Number) r[0]).longValue());
+                d.setNomHebergement((String) r[1]);
+                d.setAdresse((String) r[2]);
+                d.setPrixParNuit(r[3] != null ? ((Number) r[3]).floatValue() : null);
+                d.setEtoiles(r[4] != null ? ((Number) r[4]).intValue() : null);
+                d.setDescription((String) r[5]);
+                d.setIsDisponible(r[6] != null ? ((Boolean) r[6]) : null);
+                d.setHebergementType((String) r[7]);
+                return d;
+            }).toList();
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "hebergements_list_failed",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    // Search accommodations by name or city
+    @GetMapping("/hebergements/search")
+    public ResponseEntity<?> searchHebergements(@RequestParam("q") String q) {
+        try {
+            List<Object[]> rows = hebergementRepository.searchAsRows(q);
+            List<HebergementDTO> dto = rows.stream().map(r -> {
+                HebergementDTO d = new HebergementDTO();
+                d.setIdHebergement(((Number) r[0]).longValue());
+                d.setNomHebergement((String) r[1]);
+                d.setAdresse((String) r[2]);
+                d.setPrixParNuit(r[3] != null ? ((Number) r[3]).floatValue() : null);
+                d.setEtoiles(r[4] != null ? ((Number) r[4]).intValue() : null);
+                d.setDescription((String) r[5]);
+                d.setIsDisponible(r[6] != null ? ((Boolean) r[6]) : null);
+                d.setHebergementType((String) r[7]);
+                return d;
+            }).toList();
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "hebergements_search_failed",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    // Search accommodations by city name
+    @GetMapping("/hebergements/by-city")
+    public ResponseEntity<?> getHebergementsByCity(@RequestParam("city") String cityName) {
+        try {
+            List<Object[]> rows = hebergementRepository.findByCityName(cityName);
+            List<HebergementDTO> dto = rows.stream().map(r -> {
+                HebergementDTO d = new HebergementDTO();
+                d.setIdHebergement(((Number) r[0]).longValue());
+                d.setNomHebergement((String) r[1]);
+                d.setAdresse((String) r[2]);
+                d.setPrixParNuit(r[3] != null ? ((Number) r[3]).floatValue() : null);
+                d.setEtoiles(r[4] != null ? ((Number) r[4]).intValue() : null);
+                d.setDescription((String) r[5]);
+                d.setIsDisponible(r[6] != null ? ((Boolean) r[6]) : null);
+                d.setHebergementType((String) r[7]);
+                return d;
+            }).toList();
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "hebergements_by_city_failed",
                 "message", e.getMessage()
             ));
         }

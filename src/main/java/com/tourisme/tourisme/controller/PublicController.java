@@ -476,6 +476,107 @@ public class PublicController {
         }
     }
 
+    // Get accommodation details by id (public)
+    @GetMapping("/hebergements/{id}")
+    public ResponseEntity<?> getHebergementDetails(@PathVariable Long id) {
+        try {
+            List<Object[]> rows = hebergementRepository.findOneAsRow(id);
+            if (rows == null || rows.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            Object[] row = rows.get(0);
+
+            Map<String, Object> details = new HashMap<>();
+            details.put("idHebergement", safeLong(row, 0));
+            details.put("nomHebergement", safeString(row, 1));
+            details.put("adresse", safeString(row, 2));
+            details.put("prixParNuit", safeFloat(row, 3));
+            details.put("etoiles", safeInteger(row, 4));
+            details.put("description", safeString(row, 5));
+            details.put("isDisponible", safeBoolean(row, 6));
+            details.put("hebergementType", safeString(row, 7));
+
+            // City info via service using id in column 8
+            Long villeId = safeLong(row, 8);
+            if (villeId != null) {
+                Optional<VilleDTO> cityOpt = villeService.getVilleDTOById(villeId);
+                cityOpt.ifPresent(city -> details.put("city", city));
+            }
+
+            // Related accommodations in the same city (avoid JPA discriminator issues)
+            List<Map<String, Object>> related = new ArrayList<>();
+            if (villeId != null) {
+                Long currentId = safeLong(row, 0);
+                List<Object[]> relatedRows = hebergementRepository.findRelatedByVilleAsRows(villeId, currentId != null ? currentId : -1L);
+                related = relatedRows.stream().map(r -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("idHebergement", safeLong(r, 0));
+                    map.put("nomHebergement", safeString(r, 1));
+                    map.put("prixParNuit", safeFloat(r, 2));
+                    map.put("etoiles", safeInteger(r, 3));
+                    return map;
+                }).toList();
+            }
+            details.put("relatedAccommodations", related);
+
+            return ResponseEntity.ok(details);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "error", "hebergement_details_failed",
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    private Long safeLong(Object[] row, int idx) {
+        if (idx >= row.length) return null;
+        Object v = row[idx];
+        if (v == null) return null;
+        if (v instanceof Number n) return n.longValue();
+        if (v instanceof String s) {
+            try { return Long.parseLong(s); } catch (NumberFormatException ignored) {}
+        }
+        return null;
+    }
+
+    private Integer safeInteger(Object[] row, int idx) {
+        if (idx >= row.length) return null;
+        Object v = row[idx];
+        if (v == null) return null;
+        if (v instanceof Number n) return n.intValue();
+        if (v instanceof String s) {
+            try { return Integer.parseInt(s); } catch (NumberFormatException ignored) {}
+        }
+        return null;
+    }
+
+    private Float safeFloat(Object[] row, int idx) {
+        if (idx >= row.length) return null;
+        Object v = row[idx];
+        if (v == null) return null;
+        if (v instanceof Number n) return n.floatValue();
+        if (v instanceof String s) {
+            try { return Float.parseFloat(s); } catch (NumberFormatException ignored) {}
+        }
+        return null;
+    }
+
+    private String safeString(Object[] row, int idx) {
+        if (idx >= row.length) return null;
+        Object v = row[idx];
+        return v != null ? String.valueOf(v) : null;
+    }
+
+    private Boolean safeBoolean(Object[] row, int idx) {
+        if (idx >= row.length) return null;
+        Object v = row[idx];
+        if (v == null) return null;
+        if (v instanceof Boolean b) return b;
+        if (v instanceof Number n) return n.intValue() != 0;
+        if (v instanceof String s) return Boolean.parseBoolean(s);
+        return null;
+    }
+
     // Get services by city
     @GetMapping("/cities/{id}/services")
     public ResponseEntity<?> getCityServices(@PathVariable Long id) {
@@ -516,6 +617,30 @@ public class PublicController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
                 "error", "events_retrieval_failed",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    // List all services (lightweight)
+    @GetMapping("/services")
+    public ResponseEntity<?> getAllServices() {
+        try {
+            List<Service> services = serviceRepository.findAll();
+            List<Map<String, Object>> dto = services.stream().map(s -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("idService", s.getIdService());
+                map.put("typeService", s.getTypeService());
+                if (s.getVille() != null) {
+                    map.put("ville", s.getVille().getNomVille());
+                }
+                map.put("imageUrl", (s.getMedias() != null && !s.getMedias().isEmpty()) ? s.getMedias().get(0).getNomMedia() : null);
+                return map;
+            }).toList();
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "services_list_failed",
                 "message", e.getMessage()
             ));
         }
@@ -720,6 +845,92 @@ public class PublicController {
             return ResponseEntity.status(500).body(Map.of(
                 "error", "activity_details_retrieval_failed",
                 "message", e.getMessage()
+            ));
+        }
+    }
+
+    // Get service details by id (parent + related info)
+    @GetMapping("/services/{id}")
+    public ResponseEntity<?> getServiceDetails(@PathVariable Long id) {
+        try {
+            Optional<Service> serviceOpt = serviceRepository.findById(id);
+            if (serviceOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Service service = serviceOpt.get();
+
+            Map<String, Object> details = new HashMap<>();
+            details.put("idService", service.getIdService());
+            details.put("typeService", service.getTypeService());
+
+            // Fournisseur info if available
+            if (service.getFournisseur() != null) {
+                Map<String, Object> fournisseur = new HashMap<>();
+                fournisseur.put("idFournisseur", service.getFournisseur().getIdFournisseur());
+                fournisseur.put("nom", service.getFournisseur().getNom());
+                fournisseur.put("email", service.getFournisseur().getEmail());
+                fournisseur.put("telephone", service.getFournisseur().getTelephone());
+                details.put("fournisseur", fournisseur);
+            }
+
+            // City info
+            if (service.getVille() != null) {
+                Map<String, Object> city = new HashMap<>();
+                city.put("idVille", service.getVille().getIdVille());
+                city.put("nomVille", service.getVille().getNomVille());
+                city.put("description", service.getVille().getDescription());
+                city.put("imageUrl", service.getVille().getImageUrl());
+                city.put("latitude", service.getVille().getLatitude());
+                city.put("longitude", service.getVille().getLongitude());
+                details.put("city", city);
+            }
+
+            // Medias (flatten)
+            if (service.getMedias() != null) {
+                List<Map<String, Object>> mediaList = service.getMedias().stream().map(m -> {
+                    Map<String, Object> media = new HashMap<>();
+                    media.put("idMedia", m.getIdMedia());
+                    media.put("nomMedia", m.getNomMedia());
+                    media.put("typeMedia", m.getTypeMedia());
+                    media.put("taille", m.getTaille());
+                    media.put("dataUpload", m.getDataUpload());
+                    return media;
+                }).toList();
+                details.put("medias", mediaList);
+            } else {
+                details.put("medias", new ArrayList<>());
+            }
+
+            // Related services in same city
+            List<Map<String, Object>> related = new ArrayList<>();
+            if (service.getVille() != null) {
+                related = serviceRepository.findByVille_IdVille(service.getVille().getIdVille())
+                        .stream()
+                        .filter(s -> !s.getIdService().equals(service.getIdService()))
+                        .limit(8)
+                        .map(s -> {
+                            Map<String, Object> map = new HashMap<>();
+                            map.put("idService", s.getIdService());
+                            map.put("typeService", s.getTypeService());
+                            map.put("imageUrl", (s.getMedias() != null && !s.getMedias().isEmpty()) ? s.getMedias().get(0).getNomMedia() : null);
+                            return map;
+                        })
+                        .toList();
+            }
+            details.put("relatedServices", related);
+
+            // Statistics placeholder
+            Map<String, Object> statistics = new HashMap<>();
+            statistics.put("hasMedias", service.getMedias() != null && !service.getMedias().isEmpty());
+            statistics.put("cityPresent", service.getVille() != null);
+            details.put("statistics", statistics);
+
+            return ResponseEntity.ok(details);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "error", "service_details_failed",
+                    "message", e.getMessage()
             ));
         }
     }

@@ -281,6 +281,71 @@ public class PublicController {
         }
     }
 
+    // Get monument details by id (public)
+    @GetMapping("/monuments/{id}")
+    public ResponseEntity<?> getMonumentDetails(@PathVariable Long id) {
+        try {
+            Optional<Monument> monumentOpt = monumentRepository.findById(id);
+            if (monumentOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Monument monument = monumentOpt.get();
+
+            Map<String, Object> details = new HashMap<>();
+            details.put("idMonument", monument.getIdMonument());
+            details.put("nomMonument", monument.getNomMonument());
+            details.put("adresseMonument", monument.getAdresseMonument());
+            details.put("prix", monument.getPrix());
+            details.put("gratuit", monument.getGratuit());
+            details.put("hasCulturelle", monument.getHasCulturelle());
+            details.put("hasHistorique", monument.getHasHistorique());
+            details.put("notesMoyennes", monument.getNotesMoyennes());
+            details.put("description", monument.getDescription());
+            details.put("imageUrl", monument.getImageUrl());
+            details.put("horairesOuverture", monument.getHorairesOuverture());
+            details.put("typeMonument", monument.getTypeMonument());
+
+            // City info
+            if (monument.getVille() != null) {
+                Map<String, Object> city = new HashMap<>();
+                city.put("idVille", monument.getVille().getIdVille());
+                city.put("nomVille", monument.getVille().getNomVille());
+                city.put("description", monument.getVille().getDescription());
+                city.put("imageUrl", monument.getVille().getImageUrl());
+                city.put("latitude", monument.getVille().getLatitude());
+                city.put("longitude", monument.getVille().getLongitude());
+                details.put("city", city);
+            }
+
+            // Related monuments in same city
+            List<Map<String, Object>> related = new ArrayList<>();
+            if (monument.getVille() != null) {
+                List<Monument> inCity = monumentRepository.findByVille_IdVille(monument.getVille().getIdVille());
+                related = inCity.stream()
+                        .filter(m -> !m.getIdMonument().equals(monument.getIdMonument()))
+                        .limit(10)
+                        .map(m -> {
+                            Map<String, Object> map = new HashMap<>();
+                            map.put("idMonument", m.getIdMonument());
+                            map.put("nomMonument", m.getNomMonument());
+                            map.put("imageUrl", m.getImageUrl());
+                            map.put("notesMoyennes", m.getNotesMoyennes());
+                            return map;
+                        })
+                        .toList();
+            }
+            details.put("relatedMonuments", related);
+
+            return ResponseEntity.ok(details);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "monument_details_failed",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
     // Search monuments by city name
     @GetMapping("/monuments/by-city")
     public ResponseEntity<?> getMonumentsByCity(@RequestParam("city") String cityName) {

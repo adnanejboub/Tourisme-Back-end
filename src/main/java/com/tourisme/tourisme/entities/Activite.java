@@ -31,6 +31,24 @@ public class Activite {
     @Column(name = "conditions_speciales")
     private String conditionsSpeciales;
     
+    @Column(name = "description")
+    private String description;
+    
+    @Column(name = "image_url")
+    private String imageUrl;
+    
+    @Column(name = "prix")
+    private Double prix;
+    
+    @Column(name = "note_moyenne")
+    private Double noteMoyenne;
+    
+    @Column(name = "nombre_evaluations")
+    private Integer nombreEvaluations;
+    
+    @Column(name = "is_disponible")
+    private Boolean isDisponible;
+    
     @Enumerated(EnumType.STRING)
     @Column(name = "categorie")
     private CategorieActivite categorie;
@@ -121,6 +139,54 @@ public class Activite {
     
     public void setConditionsSpeciales(String conditionsSpeciales) {
         this.conditionsSpeciales = conditionsSpeciales;
+    }
+    
+    public String getDescription() {
+        return description;
+    }
+    
+    public void setDescription(String description) {
+        this.description = description;
+    }
+    
+    public String getImageUrl() {
+        return imageUrl;
+    }
+    
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+    
+    public Double getPrix() {
+        return prix;
+    }
+    
+    public void setPrix(Double prix) {
+        this.prix = prix;
+    }
+    
+    public Double getNoteMoyenne() {
+        return noteMoyenne;
+    }
+    
+    public void setNoteMoyenne(Double noteMoyenne) {
+        this.noteMoyenne = noteMoyenne;
+    }
+    
+    public Integer getNombreEvaluations() {
+        return nombreEvaluations;
+    }
+    
+    public void setNombreEvaluations(Integer nombreEvaluations) {
+        this.nombreEvaluations = nombreEvaluations;
+    }
+    
+    public Boolean getIsDisponible() {
+        return isDisponible;
+    }
+    
+    public void setIsDisponible(Boolean isDisponible) {
+        this.isDisponible = isDisponible;
     }
     
     public CategorieActivite getCategorie() {

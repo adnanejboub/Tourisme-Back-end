@@ -4,6 +4,7 @@ import com.tourisme.tourisme.dto.VilleDTO;
 import com.tourisme.tourisme.entities.Activite;
 import com.tourisme.tourisme.entities.Produit;
 import com.tourisme.tourisme.entities.Ville;
+
 import com.tourisme.tourisme.entities.Monument;
 import com.tourisme.tourisme.dto.MonumentDTO;
 import com.tourisme.tourisme.repository.MonumentRepository;
@@ -11,6 +12,7 @@ import com.tourisme.tourisme.entities.Hebergement;
 import com.tourisme.tourisme.dto.HebergementDTO;
 import com.tourisme.tourisme.repository.HebergementRepository;
 import com.tourisme.tourisme.repository.ProduitRepository;
+
 import com.tourisme.tourisme.repository.ServiceRepository;
 import com.tourisme.tourisme.entities.Service;
 import com.tourisme.tourisme.service.ActiviteService;
@@ -20,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -36,6 +39,7 @@ public class PublicController {
 
     @Autowired
     private ProduitRepository produitRepository;
+
 
     @Autowired
     private MonumentRepository monumentRepository;
@@ -56,6 +60,7 @@ public class PublicController {
     public ResponseEntity<?> getCity(@PathVariable Long id) {
         return villeService.getVilleDTOById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
+
 
     // Get comprehensive city details with all related data
     @GetMapping("/cities/{id}/details")
@@ -222,6 +227,7 @@ public class PublicController {
             ));
         }
     }
+
 
     // Get monuments by city
     @GetMapping("/cities/{id}/monuments")
@@ -425,6 +431,7 @@ public class PublicController {
             return ResponseEntity.ok(serviceDetails);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
+
                 "error", "services_retrieval_failed",
                 "message", e.getMessage()
             ));
@@ -540,7 +547,119 @@ public class PublicController {
             ));
         }
     }
+
+    // Get comprehensive activity details
+    @GetMapping("/activities/{id}/details")
+    public ResponseEntity<?> getActivityDetails(@PathVariable Long id) {
+        try {
+            Optional<Activite> activiteOpt = activiteService.getActiviteById(id);
+            if (activiteOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Activite activite = activiteOpt.get();
+            Map<String, Object> activityDetails = new HashMap<>();
+
+            // Basic activity information
+            activityDetails.put("idActivite", activite.getIdActivite());
+            activityDetails.put("nom", activite.getNom());
+            activityDetails.put("description", activite.getDescription());
+            activityDetails.put("imageUrl", activite.getImageUrl());
+            activityDetails.put("prix", activite.getPrix());
+            activityDetails.put("noteMoyenne", activite.getNoteMoyenne());
+            activityDetails.put("nombreEvaluations", activite.getNombreEvaluations());
+            activityDetails.put("isDisponible", activite.getIsDisponible());
+            activityDetails.put("dureeMinimun", activite.getDureeMinimun());
+            activityDetails.put("dureeMaximun", activite.getDureeMaximun());
+            activityDetails.put("saison", activite.getSaison());
+            activityDetails.put("niveauDificulta", activite.getNiveauDificulta());
+            activityDetails.put("conditionsSpeciales", activite.getConditionsSpeciales());
+            activityDetails.put("categorie", activite.getCategorie());
+
+            // City information
+            if (activite.getVille() != null) {
+                Map<String, Object> cityInfo = new HashMap<>();
+                cityInfo.put("idVille", activite.getVille().getIdVille());
+                cityInfo.put("nomVille", activite.getVille().getNomVille());
+                cityInfo.put("description", activite.getVille().getDescription());
+                cityInfo.put("imageUrl", activite.getVille().getImageUrl());
+                cityInfo.put("latitude", activite.getVille().getLatitude());
+                cityInfo.put("longitude", activite.getVille().getLongitude());
+                cityInfo.put("paysNom", activite.getVille().getPays() != null ? activite.getVille().getPays().getNomPays() : null);
+                cityInfo.put("climatNom", activite.getVille().getClimat() != null ? activite.getVille().getClimat().getNomClimat() : null);
+                cityInfo.put("isPlage", activite.getVille().getIsPlage());
+                cityInfo.put("isMontagne", activite.getVille().getIsMontagne());
+                cityInfo.put("isDesert", activite.getVille().getIsDesert());
+                cityInfo.put("isRiviera", activite.getVille().getIsRiviera());
+                cityInfo.put("isHistorique", activite.getVille().getIsHistorique());
+                cityInfo.put("isCulturelle", activite.getVille().getIsCulturelle());
+                cityInfo.put("isModerne", activite.getVille().getIsModerne());
+                cityInfo.put("noteMoyenne", activite.getVille().getNoteMoyenne());
+                activityDetails.put("city", cityInfo);
+            }
+
+            // Media information
+            if (activite.getMedias() != null && !activite.getMedias().isEmpty()) {
+                List<Map<String, Object>> mediaList = activite.getMedias().stream()
+                    .map(media -> {
+                        Map<String, Object> mediaInfo = new HashMap<>();
+                        mediaInfo.put("idMedia", media.getIdMedia());
+                        mediaInfo.put("nomMedia", media.getNomMedia());
+                        mediaInfo.put("typeMedia", media.getTypeMedia());
+                        mediaInfo.put("taille", media.getTaille());
+                        mediaInfo.put("dataUpload", media.getDataUpload());
+                        return mediaInfo;
+                    }).toList();
+                activityDetails.put("medias", mediaList);
+            } else {
+                activityDetails.put("medias", new ArrayList<>());
+            }
+
+            // Related activities in the same city
+            if (activite.getVille() != null) {
+                List<Activite> relatedActivities = activiteService.getActivitesByVille(activite.getVille().getIdVille())
+                    .stream()
+                    .filter(a -> !a.getIdActivite().equals(activite.getIdActivite()))
+                    .limit(5)
+                    .toList();
+
+                List<Map<String, Object>> relatedActivitiesList = relatedActivities.stream()
+                    .map(related -> {
+                        Map<String, Object> relatedInfo = new HashMap<>();
+                        relatedInfo.put("idActivite", related.getIdActivite());
+                        relatedInfo.put("nom", related.getNom());
+                        relatedInfo.put("imageUrl", related.getImageUrl());
+                        relatedInfo.put("prix", related.getPrix());
+                        relatedInfo.put("noteMoyenne", related.getNoteMoyenne());
+                        relatedInfo.put("categorie", related.getCategorie());
+                        relatedInfo.put("dureeMinimun", related.getDureeMinimun());
+                        relatedInfo.put("dureeMaximun", related.getDureeMaximun());
+                        return relatedInfo;
+                    }).toList();
+                activityDetails.put("relatedActivities", relatedActivitiesList);
+            } else {
+                activityDetails.put("relatedActivities", new ArrayList<>());
+            }
+
+            // Activity statistics
+            Map<String, Object> statistics = new HashMap<>();
+            statistics.put("totalDuration", activite.getDureeMaximun() != null ? activite.getDureeMaximun() : 0);
+            statistics.put("difficultyLevel", activite.getNiveauDificulta());
+            statistics.put("season", activite.getSaison());
+            statistics.put("category", activite.getCategorie());
+            statistics.put("isAvailable", activite.getIsDisponible());
+            activityDetails.put("statistics", statistics);
+
+            return ResponseEntity.ok(activityDetails);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "activity_details_retrieval_failed",
+                "message", e.getMessage()
+            ));
+        }
+    }
 }
+
 
 
 

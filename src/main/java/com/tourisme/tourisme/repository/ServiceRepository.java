@@ -25,3 +25,4 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
     @Query("SELECT s FROM Service s WHERE s.ville.idVille = :cityId AND s.typeService = :typeService")
     List<Service> findByVilleAndType(@Param("cityId") Long cityId, @Param("typeService") Service.TypeService typeService);
 }
+

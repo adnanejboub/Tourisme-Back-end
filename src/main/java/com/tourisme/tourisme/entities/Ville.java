@@ -36,6 +36,9 @@ public class Ville {
     @Column(name = "note_moyenne")
     private Float noteMoyenne;
     
+    @Column(name = "image_url")
+    private String imageUrl;
+    
     // Boolean attributes for city characteristics
     @Column(name = "is_plage")
     private Boolean isPlage;
@@ -204,6 +207,14 @@ public class Ville {
     
     public void setNoteMoyenne(Float noteMoyenne) {
         this.noteMoyenne = noteMoyenne;
+    }
+    
+    public String getImageUrl() {
+        return imageUrl;
+    }
+    
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
     
     public Boolean getIsPlage() {

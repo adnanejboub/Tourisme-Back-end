@@ -6,6 +6,7 @@ import com.tourisme.tourisme.entities.Utilisateur;
 import com.tourisme.tourisme.repository.TouristeRepository;
 import com.tourisme.tourisme.repository.UtilisateurRepository;
 import com.tourisme.tourisme.service.UserMappingService;
+import com.tourisme.tourisme.service.FavoriteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,6 +31,9 @@ public class UserController {
 
     @Autowired
     private UserMappingService userMappingService;
+
+    @Autowired
+    private FavoriteService favoriteService;
 
     @GetMapping("/profile")
     public ResponseEntity<?> getCurrentUserProfile() {
@@ -94,13 +98,12 @@ public class UserController {
     @GetMapping("/favorites")
     public ResponseEntity<?> getUserFavorites() {
         try {
-            Long userId = userMappingService.getCurrentUserId();
-            // TODO: Implement favorites service
-            return ResponseEntity.ok(Map.of(
-                "message", "Favorites endpoint ready - implementation needed",
-                "userId", userId,
-                "favorites", new ArrayList<>()
-            ));
+            return userMappingService.getCurrentUser()
+                .map(user -> ResponseEntity.ok(Map.of(
+                        "userId", user.getIdUtilisateur(),
+                        "favorites", favoriteService.listFavorites(user)
+                )))
+                .orElse(ResponseEntity.status(404).body(Map.of("error", "User not found")));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
                 "error", "favorites_retrieval_failed",
@@ -113,17 +116,11 @@ public class UserController {
     @PostMapping("/favorites")
     public ResponseEntity<?> addToFavorites(@RequestBody Map<String, Object> payload) {
         try {
-            Long userId = userMappingService.getCurrentUserId();
             String type = (String) payload.get("type"); // "city", "activity", "product"
             Long itemId = Long.valueOf(String.valueOf(payload.get("itemId")));
-            
-            // TODO: Implement favorites service
-            return ResponseEntity.ok(Map.of(
-                "message", "Added to favorites",
-                "userId", userId,
-                "type", type,
-                "itemId", itemId
-            ));
+            return userMappingService.getCurrentUser()
+                .map(user -> ResponseEntity.ok(favoriteService.toggleFavorite(user, type, itemId)))
+                .orElse(ResponseEntity.status(404).body(Map.of("error", "User not found")));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
                 "error", "add_favorite_failed",
@@ -136,13 +133,16 @@ public class UserController {
     @DeleteMapping("/favorites/{id}")
     public ResponseEntity<?> removeFromFavorites(@PathVariable Long id) {
         try {
-            Long userId = userMappingService.getCurrentUserId();
-            // TODO: Implement favorites service
-            return ResponseEntity.ok(Map.of(
-                "message", "Removed from favorites",
-                "userId", userId,
-                "favoriteId", id
-            ));
+            return userMappingService.getCurrentUser()
+                .map(user -> {
+                    // best-effort delete
+                    favoriteService.toggleFavorite(user, "force_delete_by_id", id);
+                    return ResponseEntity.ok(Map.of(
+                        "message", "Removed from favorites",
+                        "favoriteId", id
+                    ));
+                })
+                .orElse(ResponseEntity.status(404).body(Map.of("error", "User not found")));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
                 "error", "remove_favorite_failed",

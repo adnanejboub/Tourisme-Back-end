@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -67,9 +68,18 @@ public class UserRegistrationService {
         String keycloakUserId = null;
 
         try {
-            // Vérification préalable de l'existence de l'utilisateur
+            // Vérification préalable de l'existence de l'utilisateur dans la base locale
             if (utilisateurRepository.existsByEmail(request.getEmail())) {
-                throw new DuplicateUserException("Un utilisateur avec cet email existe déjà");
+                throw new DuplicateUserException("Un utilisateur avec cet email existe déjà dans la base locale");
+            }
+
+            // Vérification préalable de l'existence de l'utilisateur dans Keycloak
+            String username = request.getUsername() != null && !request.getUsername().isBlank() 
+                ? request.getUsername() 
+                : request.getEmail();
+            
+            if (userExistsInKeycloak(username, request.getEmail(), realm)) {
+                throw new DuplicateUserException("Un utilisateur avec ce nom d'utilisateur ou cet email existe déjà dans Keycloak");
             }
 
             // Étape 1: Créer l'utilisateur dans la base locale (dans la transaction)
@@ -196,6 +206,22 @@ public class UserRegistrationService {
         if (response.getStatus() != 201) {
             String errorBody = response.readEntity(String.class);
             logger.error("❌ Échec de création dans Keycloak - Status: {}, Body: {}", response.getStatus(), errorBody);
+
+            // Normaliser le corps d'erreur pour détecter les messages avec espaces/nouvelles lignes
+            String normalized = errorBody == null ? "" : errorBody.replaceAll("\\s+", " ").toLowerCase();
+
+            // Si Keycloak renvoie 409, mapper en DuplicateUserException
+            if (response.getStatus() == 409 || normalized.contains("user exists")) {
+                if (normalized.contains("username")) {
+                    throw new DuplicateUserException("Un utilisateur avec ce nom d'utilisateur existe déjà dans Keycloak");
+                }
+                if (normalized.contains("email")) {
+                    throw new DuplicateUserException("Un utilisateur avec cet email existe déjà dans Keycloak");
+                }
+                throw new DuplicateUserException("Utilisateur déjà existant dans Keycloak");
+            }
+
+            // Autres erreurs non gérées explicitement
             throw new RuntimeException("Failed to create user in Keycloak: " + errorBody);
         }
 
@@ -311,6 +337,43 @@ public class UserRegistrationService {
         ));
         
         return response;
+    }
+
+    /**
+     * Vérifier si un utilisateur existe déjà dans Keycloak
+     */
+    private boolean userExistsInKeycloak(String username, String email, String realm) {
+        try {
+            UsersResource usersResource = keycloak.realm(realm).users();
+            
+            // Vérifier par nom d'utilisateur
+            List<UserRepresentation> usersByUsername = usersResource.search(username, 0, 10);
+            boolean existsByUsername = usersByUsername.stream()
+                .anyMatch(user -> username.equalsIgnoreCase(user.getUsername()));
+            
+            if (existsByUsername) {
+                logger.warn("⚠️ Utilisateur trouvé dans Keycloak avec le nom d'utilisateur: {}", username);
+                return true;
+            }
+            
+            // Vérifier par email
+            List<UserRepresentation> usersByEmail = usersResource.searchByEmail(email, true);
+            boolean existsByEmail = usersByEmail.stream()
+                .anyMatch(user -> email.equalsIgnoreCase(user.getEmail()));
+            
+            if (existsByEmail) {
+                logger.warn("⚠️ Utilisateur trouvé dans Keycloak avec l'email: {}", email);
+                return true;
+            }
+            
+            logger.info("✅ Aucun utilisateur trouvé dans Keycloak avec username: {} ou email: {}", username, email);
+            return false;
+            
+        } catch (Exception e) {
+            logger.error("❌ Erreur lors de la vérification de l'existence de l'utilisateur dans Keycloak: {}", e.getMessage());
+            // En cas d'erreur, on considère que l'utilisateur n'existe pas pour éviter de bloquer l'inscription
+            return false;
+        }
     }
 
     /**

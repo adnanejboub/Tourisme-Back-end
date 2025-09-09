@@ -1,0 +1,41 @@
+# Template de configuration pour l'authentification sociale
+# Copiez ce fichier vers application-social.properties et remplissez vos valeurs
+
+# Google OAuth
+google.client.id=YOUR_GOOGLE_CLIENT_ID
+google.client.secret=YOUR_GOOGLE_CLIENT_SECRET
+
+# Facebook OAuth
+facebook.app.id=YOUR_FACEBOOK_APP_ID
+facebook.app.secret=YOUR_FACEBOOK_APP_SECRET
+
+# Apple OAuth
+apple.team.id=YOUR_APPLE_TEAM_ID
+apple.key.id=YOUR_APPLE_KEY_ID
+apple.private.key=YOUR_APPLE_PRIVATE_KEY
+
+# Configuration Keycloak pour l'authentification sociale
+keycloak.social.auth.enabled=true
+keycloak.social.providers=google,facebook,apple
+
+# Instructions de configuration:
+# 
+# 1. Google OAuth:
+#    - Obtenez le Client ID et Secret depuis Google Cloud Console
+#    - Configurez les domaines autorisés
+#    - Activez les APIs nécessaires
+# 
+# 2. Facebook OAuth:
+#    - Obtenez l'App ID et Secret depuis Facebook Developers
+#    - Configurez les plateformes
+#    - Ajoutez les domaines autorisés
+# 
+# 3. Apple OAuth:
+#    - Obtenez le Team ID depuis Apple Developer Portal
+#    - Créez une clé privée et obtenez le Key ID
+#    - Configurez le Service ID
+# 
+# 4. Keycloak:
+#    - Ajoutez les fournisseurs d'identité dans Keycloak
+#    - Configurez les mappages d'attributs
+#    - Testez la configuration

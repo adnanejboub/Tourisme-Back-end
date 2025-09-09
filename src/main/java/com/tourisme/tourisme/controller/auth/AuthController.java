@@ -609,5 +609,73 @@ public class AuthController {
         ));
     }
 
+    /**
+     * Endpoint pour vérifier si un utilisateur existe déjà (utile pour le frontend)
+     */
+    @GetMapping("/check-user-exists")
+    public ResponseEntity<?> checkUserExists(@RequestParam(required = false) String email, 
+                                           @RequestParam(required = false) String username) {
+        try {
+            if ((email == null || email.isBlank()) && (username == null || username.isBlank())) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "error", "validation_error",
+                    "message", "email ou username requis"
+                ));
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            
+            // Vérifier dans la base locale
+            boolean existsInLocal = false;
+            if (email != null && !email.isBlank()) {
+                existsInLocal = utilisateurRepository.existsByEmail(email);
+            }
+            
+            // Vérifier dans Keycloak
+            boolean existsInKeycloak = false;
+            String realm = env.getProperty("keycloak.realm");
+            if (realm != null) {
+                try {
+                    UsersResource usersResource = keycloak.realm(realm).users();
+                    
+                    if (email != null && !email.isBlank()) {
+                        List<UserRepresentation> usersByEmail = usersResource.searchByEmail(email, true);
+                        existsInKeycloak = usersByEmail.stream()
+                            .anyMatch(user -> email.equalsIgnoreCase(user.getEmail()));
+                    }
+                    
+                    if (!existsInKeycloak && username != null && !username.isBlank()) {
+                        List<UserRepresentation> usersByUsername = usersResource.search(username, 0, 10);
+                        existsInKeycloak = usersByUsername.stream()
+                            .anyMatch(user -> username.equalsIgnoreCase(user.getUsername()));
+                    }
+                } catch (Exception e) {
+                    logger.warn("Erreur lors de la vérification Keycloak: {}", e.getMessage());
+                }
+            }
+            
+            result.put("email", email);
+            result.put("username", username);
+            result.put("existsInLocal", existsInLocal);
+            result.put("existsInKeycloak", existsInKeycloak);
+            result.put("canRegister", !existsInLocal && !existsInKeycloak);
+            
+            if (existsInLocal || existsInKeycloak) {
+                result.put("message", "Utilisateur déjà existant");
+                return ResponseEntity.status(409).body(result);
+            } else {
+                result.put("message", "Utilisateur disponible");
+                return ResponseEntity.ok(result);
+            }
+            
+        } catch (Exception e) {
+            logger.error("Erreur lors de la vérification de l'utilisateur: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "check_failed",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
 
 }

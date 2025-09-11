@@ -24,11 +24,16 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<?> createOrder(
-            @Valid @RequestBody CreateOrderDto createOrderDto,
+            @RequestBody Map<String, Object> request,
             @AuthenticationPrincipal UserDetails userDetails) {
-        // Mock user ID for now
-        Long userId = 1L;
-        String orderNumber = orderService.createOrder(userId, createOrderDto);
+        Long userId = 1L; // Replace with actual user extraction in production
+
+        String shippingAddress = request.get("shippingAddress") != null ? request.get("shippingAddress").toString() : null;
+        String paymentMethod = request.get("paymentMethod") != null ? request.get("paymentMethod").toString() : null;
+
+        // The service should fetch cart items for userId and create the order
+        String orderNumber = orderService.createOrderFromCart(userId, shippingAddress, paymentMethod);
+
         return ResponseEntity.ok().body(Map.of(
                 "message", "Order created successfully",
                 "orderNumber", orderNumber

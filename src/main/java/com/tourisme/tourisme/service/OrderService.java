@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -66,6 +67,54 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
 
         // Clear cart after successful order
+        cartItemRepository.deleteByUser_IdUtilisateur(userId);
+
+        return savedOrder.getOrderNumber();
+    }
+
+    @Transactional
+    public String createOrderFromCart(Long userId, String shippingAddress, String paymentMethod) {
+        Utilisateur user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<CartItem> cartItems = cartItemRepository.findByUser_IdUtilisateurOrderByCreatedDateDesc(userId);
+        if (cartItems.isEmpty()) {
+            throw new RuntimeException("Cart is empty");
+        }
+
+        Order order = new Order();
+        order.setOrderNumber(generateOrderNumber());
+        order.setUtilisateur(user);
+        order.setShippingAddress(shippingAddress);
+        order.setPaymentMethod(paymentMethod);
+        order.setOrderStatus(Order.OrderStatus.PENDING);
+        order.setPaymentStatus(Order.PaymentStatus.PENDING);
+
+        double totalAmount = 0.0;
+        List<OrderItem> orderItemList = new ArrayList<>();
+
+        for (CartItem cartItem : cartItems) {
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrder(order);
+            orderItem.setProduct(cartItem.getProduct());
+            orderItem.setQuantity(cartItem.getQuantity());
+            orderItem.setSelectedColor(cartItem.getSelectedColor());
+            orderItem.setSelectedSize(cartItem.getSelectedSize());
+
+            double itemPrice = (cartItem.getProduct().getDiscountedPrice() > 0)
+                    ? cartItem.getProduct().getDiscountedPrice()
+                    : cartItem.getProduct().getPrice();
+
+            orderItem.setPrice(itemPrice);
+            totalAmount += itemPrice * cartItem.getQuantity();
+
+            orderItemList.add(orderItem);
+        }
+
+        order.setOrderItems(orderItemList); // <-- Add this line!
+        order.setTotalAmount(totalAmount);
+        Order savedOrder = orderRepository.save(order);
+
         cartItemRepository.deleteByUser_IdUtilisateur(userId);
 
         return savedOrder.getOrderNumber();

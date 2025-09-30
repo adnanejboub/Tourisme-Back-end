@@ -23,4 +23,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(p.description) LIKE LOWER(CONCAT('%', :query, '%')))")
     Page<Product> searchProducts(@Param("query") String query, Pageable pageable);
+
+    // Get new products - sorted by creation date (most recent first)  
+    List<Product> findTop2ByIsActiveTrueOrderByCreatedDateDesc();
+
+    // Get top selling products using OrderItem
+    @Query(value = "SELECT p FROM Product p LEFT JOIN OrderItem oi ON oi.product.id = p.id " +
+           "WHERE p.isActive = true " +
+           "GROUP BY p.id " +
+           "ORDER BY COALESCE(SUM(oi.quantity), 0) DESC",
+           countQuery = "SELECT COUNT(p) FROM Product p WHERE p.isActive = true")
+    Page<Product> findTopSellingProducts(Pageable pageable);
 }

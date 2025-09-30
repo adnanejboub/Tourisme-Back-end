@@ -45,6 +45,18 @@ public class ProductService {
                 .map(this::convertToDto);
     }
 
+    public List<ProductDto> getNewProducts() {
+        return productRepository.findTop2ByIsActiveTrueOrderByCreatedDateDesc()
+                .stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    public Page<ProductDto> getTopSellingProducts(Pageable pageable) {
+        return productRepository.findTopSellingProducts(pageable)
+                .map(this::convertToDto);
+    }
+
     private ProductDto convertToDto(Product product) {
         ProductDto dto = new ProductDto();
         dto.setId(product.getId());

@@ -1,0 +1,45 @@
+### Get all products (paginated)
+GET http://localhost:8080/products?page=0&size=2
+Accept: application/json
+
+###
+
+### Get product by ID
+GET http://localhost:8080/products/1
+Accept: application/json
+
+###
+
+### Get products by category (paginated)
+GET http://localhost:8080/products/category/2?page=0&size=1
+Accept: application/json
+
+###
+
+### Get featured products
+GET http://localhost:8080/products/featured
+Accept: application/json
+
+###
+
+### Search products (paginated)
+GET http://localhost:8080/products/search?query=aa&page=0&size=2
+Accept: application/json
+
+###
+
+### Get new products (latest 10 products)
+GET http://localhost:8080/products/new
+Accept: application/json
+
+###
+
+### Get top selling products (paginated)
+GET http://localhost:8080/products/top-selling?page=0&size=10
+Accept: application/json
+
+###
+
+### Get top selling products (first page, 5 items)
+GET http://localhost:8080/products/top-selling?page=0&size=3
+Accept: application/json

@@ -58,4 +58,19 @@ public class ProductController {
         Page<ProductDto> products = productService.searchProducts(query, pageable);
         return ResponseEntity.ok(products);
     }
+
+    @GetMapping("/new")
+    public ResponseEntity<List<ProductDto>> getNewProducts() {
+        List<ProductDto> products = productService.getNewProducts();
+        return ResponseEntity.ok(products);
+    }
+
+    @GetMapping("/top-selling")
+    public ResponseEntity<Page<ProductDto>> getTopSellingProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ProductDto> products = productService.getTopSellingProducts(pageable);
+        return ResponseEntity.ok(products);
+    }
 }
